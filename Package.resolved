@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Mustache",
+        "repositoryURL": "https://github.com/groue/GRMustache.swift",
+        "state": {
+          "branch": null,
+          "revision": "671e2c5234e829c1f337c9d300bd6d9b21d1c42a",
+          "version": "4.0.1"
+        }
+      },
+      {
+        "package": "swift-argument-parser",
+        "repositoryURL": "https://github.com/apple/swift-argument-parser",
+        "state": {
+          "branch": null,
+          "revision": "7255fd547f70468e19abbac5f7964f1ef309ad92",
+          "version": "0.2.1"
+        }
+      },
+      {
+        "package": "swift-tools-support-core",
+        "repositoryURL": "https://github.com/apple/swift-tools-support-core",
+        "state": {
+          "branch": null,
+          "revision": "f39fc6c12266697b1585589090f0004903974685",
+          "version": "0.1.10"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
