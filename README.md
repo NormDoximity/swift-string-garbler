@@ -30,7 +30,7 @@ and the value is the string you want to garble. An example file is below:
 }
 ```
 
-The values strings are read by `ssg`, garbled, and the resulting output is a swift source file you
+The values strings are read by `ssg`, garbled, and the [resulting output](https://github.com/NormDoximity/swift-string-garbler/blob/main/Tests/ssgTests/ProjectKeys.swift) is a swift source file you
 can include in your app project. `ssg` will use the values specified in the envrironment file, unless a
 corresponding key is found as an envrionment variable in the run time environment of the executing process.
 Should an environment variable be found, that value will be used instead of the value in the passed in 
