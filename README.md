@@ -1,6 +1,10 @@
 # ssg - swift string garbler
 
+- "garble garble" - 🦃 
+
 Hides sensitive strings that get embedded in your app's binary.
+
+
 
 ```
 USAGE: ssg [--environment-path <environment-path>] [--checksum-path <checksum-path>] <output-path>
