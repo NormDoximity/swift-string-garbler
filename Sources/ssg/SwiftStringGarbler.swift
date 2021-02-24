@@ -10,6 +10,7 @@ import TSCBasic
 import CryptoKit
 import Mustache
 
+@available(OSX 10.15, *)
 final class SwiftStringGarbler {
 
     enum AppError: Error {
@@ -140,6 +141,7 @@ extension AbsolutePath {
 }
 
 extension String {
+    @available(OSX 10.15, *)
     func sha256Checksum() -> String {
         guard let d = data(using: .utf8) else { fatalError("Can't get data representation of string \(self)") }
         let digest = SHA256.hash(data: d)

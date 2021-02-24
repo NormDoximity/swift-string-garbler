@@ -7,7 +7,7 @@ import CryptoKit
 
 enum ProjectKeys {
 
-    private static var keyData: [UInt8] { [114, 108, 102, 110, 52, 69, 69, 109, 51, 53, 109, 110, 71, 67, 52, 76, 73, 97, 112, 121, 112, 114, 83, 88, 117, 74, 73, 102, 109, 79, 89, 76, 81, 83, 97, 43, 107, 89, 56, 71, 84, 82, 107, 61] }
+    private static var keyData: [UInt8] { [118, 112, 49, 50, 43, 106, 71, 99, 105, 47, 53, 119, 112, 103, 103, 56, 87, 110, 65, 108, 99, 67, 83, 80, 56, 115, 111, 48, 89, 53, 113, 90, 73, 116, 49, 48, 101, 111, 43, 97, 52, 102, 89, 61] }
 
     private static var decryptKey: SymmetricKey? {
         guard let d = dataFromBase64Encoded(keyData) else { return nil }
@@ -15,29 +15,29 @@ enum ProjectKeys {
     }
 
     
-    private static var key2value: [UInt8] { [108, 47, 97, 82, 120, 67, 105, 66, 110, 53, 100, 54, 77, 85, 109, 77, 106, 65, 97, 98, 116, 66, 82, 71, 121, 71, 43, 106, 116, 81, 54, 49, 53, 118, 121, 100, 119, 97, 98, 115, 76, 73, 87, 65, 121, 113, 48, 122, 98, 47, 121, 65, 104, 70, 122, 106, 77, 119, 65, 61] }
+    private static var key1value: [UInt8] { [87, 51, 56, 50, 112, 97, 111, 117, 116, 52, 97, 110, 65, 50, 97, 66, 90, 87, 111, 112, 50, 108, 75, 89, 100, 77, 74, 105, 85, 83, 117, 78, 110, 97, 89, 53, 78, 84, 51, 71, 78, 98, 99, 87, 57, 111, 98, 109, 118, 51, 87, 52, 47, 103, 76, 56, 114, 98, 99, 61] }
     
-    private static var key3value: [UInt8] { [104, 105, 83, 108, 83, 104, 69, 118, 57, 85, 110, 87, 49, 81, 115, 71, 107, 106, 84, 65, 106, 80, 109, 68, 119, 52, 107, 47, 118, 72, 47, 88, 66, 88, 70, 57, 101, 83, 118, 65, 112, 117, 68, 67, 122, 48, 54, 88, 55, 90, 106, 74, 115, 68, 120, 74, 98, 108, 54, 85, 102, 67, 99, 122, 70, 57, 118, 121, 110, 120, 50, 87, 105, 74, 103, 61] }
+    private static var key2value: [UInt8] { [110, 83, 101, 47, 72, 120, 89, 75, 48, 71, 111, 83, 87, 100, 122, 86, 121, 50, 103, 66, 74, 119, 77, 77, 98, 85, 115, 90, 106, 49, 47, 118, 105, 113, 80, 47, 82, 56, 71, 83, 111, 115, 55, 56, 85, 105, 79, 114, 117, 53, 48, 48, 52, 113, 52, 68, 104, 71, 69, 61] }
     
-    private static var key1value: [UInt8] { [122, 88, 43, 99, 112, 110, 90, 70, 83, 66, 106, 119, 43, 73, 79, 56, 112, 99, 74, 85, 118, 71, 49, 87, 86, 56, 74, 102, 80, 99, 49, 122, 107, 75, 80, 72, 106, 117, 72, 43, 56, 57, 72, 90, 72, 83, 73, 54, 112, 99, 101, 79, 67, 111, 73, 103, 88, 101, 115, 61] }
+    private static var key3value: [UInt8] { [115, 78, 43, 121, 106, 99, 49, 109, 104, 79, 47, 47, 78, 106, 75, 69, 108, 49, 108, 78, 86, 81, 112, 100, 113, 99, 117, 57, 102, 79, 50, 49, 89, 56, 120, 57, 117, 47, 74, 114, 70, 112, 102, 81, 56, 83, 106, 71, 51, 56, 115, 107, 54, 120, 47, 66, 84, 97, 121, 101, 82, 110, 85, 120, 71, 71, 49, 76, 119, 87, 109, 54, 114, 89, 65, 61] }
     
 
     private enum Internal {
+        
+        case key1
         
         case key2
         
         case key3
         
-        case key1
-        
     }
 
+    
+    public static var key1: String { reconstituteValue(key: Internal.key1) }
     
     public static var key2: String { reconstituteValue(key: Internal.key2) }
     
     public static var key3: String { reconstituteValue(key: Internal.key3) }
-    
-    public static var key1: String { reconstituteValue(key: Internal.key1) }
     
 
     private static func reconstituteValue(key: Internal) -> String {
@@ -47,14 +47,14 @@ enum ProjectKeys {
         let bytes: [UInt8] = {
             switch key {
                 
+                case .key1:
+                return key1value
+                
                 case .key2:
                 return key2value
                 
                 case .key3:
                 return key3value
-                
-                case .key1:
-                return key1value
                 
             }
         }()

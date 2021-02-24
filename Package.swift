@@ -6,7 +6,10 @@ import PackageDescription
 let package = Package(
     name: "ssg",
     platforms: [
-            .macOS(.v10_15),
+        .macOS(.v10_15),
+    ],
+    products: [
+        .executable(name: "ssg", targets: ["ssg"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
