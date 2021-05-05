@@ -10,10 +10,6 @@ import TSCBasic
 import CryptoKit
 import Mustache
 
-public struct UserFlags {
-    let isVerbose: Bool
-}
-
 private enum ValueLocation {
     case file, env
 }
@@ -22,21 +18,11 @@ private typealias ValueTuple = (value: String, location: ValueLocation)
 @available(OSX 10.15, *)
 final class SwiftStringGarbler {
 
-    enum AppError: Error {
-        case fileSystem(String)
-        case badInputJson
-        case dataError(String)
-    }
-
-    let environmentPath: String
-    let outputPath: String
-    let checksumPath: String?
+    private let pathConfig: PathConfig
     private let userFlags: UserFlags
 
-    init(environmentPath: String, checksumPath: String?, outputPath: String, userFlags: UserFlags) {
-        self.environmentPath = environmentPath
-        self.checksumPath = checksumPath
-        self.outputPath = outputPath
+    init(pathConfig: PathConfig, userFlags: UserFlags) {
+        self.pathConfig = pathConfig
         self.userFlags = userFlags
     }
 
@@ -45,10 +31,12 @@ final class SwiftStringGarbler {
             throw AppError.fileSystem("No current working directory!")
         }
 
-        let inputFile = absPath(for: environmentPath, relatativeTo: cwd)
-        guard inputFile.existsAsFile() else {
-            throw AppError.fileSystem("Couldn't find input environment at \(inputFile.pathString)")
+        let arePathsValid = pathConfig.isValid(cwd: cwd)
+        if case .invalid(let message) = arePathsValid {
+            throw AppError.fileSystem(message)
         }
+
+        let inputFile = pathConfig.environmentPath.absolutePath(relatetiveTo: cwd)
 
         guard let inputJson = try localFileSystem.readFileContents(inputFile)
             .withData({
@@ -70,16 +58,15 @@ final class SwiftStringGarbler {
             print("\(variablesExtractedFromWhereReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
         }
 
-        if let checksumPath = checksumPath {
+        if let checksumPath = pathConfig.checksumPath?.absolutePath(relatetiveTo: cwd) {
             let checksum = computeChecksum(for: apiKeys)
-            let existingSum = existingChecksum(at: checksumPath, relativeTo: cwd)
+            let existingSum = existingChecksum(at: checksumPath)
             if let existing = existingSum, existing == checksum {
                 print("Checksums match. Skipping project keys file creation.")
                 return
             }
-            let outPath = absPath(for: checksumPath, relatativeTo: cwd)
             do {
-                try localFileSystem.writeFileContents(outPath, bytes: ByteString(encodingAsUTF8: checksum))
+                try localFileSystem.writeFileContents(checksumPath, bytes: ByteString(encodingAsUTF8: checksum))
             } catch let e {
                 throw AppError.fileSystem(e.localizedDescription)
             }
@@ -117,11 +104,16 @@ final class SwiftStringGarbler {
         templateDict["apiKeys"] = templateKeys
 
         /// render the swift source file for our api keys
-        let template = try Mustache.Template(string: Template.keyFile)
+        let template: Mustache.Template
+        if let templatePath = pathConfig.templatePath?.absolutePath(relatetiveTo: cwd) {
+            template = try Mustache.Template(path: templatePath.pathString)
+        } else {
+            template = try Mustache.Template(string: Template.keyFile)
+        }
         let rendering = try template.render(templateDict)
 
         // write it out..
-        let path = absPath(for: outputPath, relatativeTo: cwd)
+        let path = pathConfig.outputPath.absolutePath(relatetiveTo: cwd)
         try localFileSystem.writeFileContents(path, bytes: ByteString(encodingAsUTF8: rendering))
     }
 
@@ -138,8 +130,7 @@ final class SwiftStringGarbler {
         return corpus.sha256Checksum()
     }
 
-    private func existingChecksum(at path: String, relativeTo cwd: AbsolutePath) -> String? {
-        let path = absPath(for: path, relatativeTo: cwd)
+    private func existingChecksum(at path: AbsolutePath) -> String? {
         if path.existsAsFile() {
             if let checksum = try? localFileSystem.readFileContents(path) {
                 return String(checksum.cString)
@@ -166,17 +157,3 @@ final class SwiftStringGarbler {
     }
 }
 
-extension AbsolutePath {
-    func existsAsFile(in fileSystem: FileSystem = localFileSystem) -> Bool {
-        return fileSystem.isFile(self)
-    }
-}
-
-extension String {
-    @available(OSX 10.15, *)
-    func sha256Checksum() -> String {
-        guard let d = data(using: .utf8) else { fatalError("Can't get data representation of string \(self)") }
-        let digest = SHA256.hash(data: d)
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
-    }
-}

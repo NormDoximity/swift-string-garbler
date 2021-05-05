@@ -10,6 +10,9 @@ struct SSGCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Path to variable checksum file")
     var checksumPath: String?
 
+    @Option(name: .shortAndLong, help: "Path to custom output template")
+    var templatePath: String?
+
     @Flag(name: .shortAndLong, help: "Verbose reporting")
     var verbose: Bool = false
 
@@ -17,10 +20,14 @@ struct SSGCommand: ParsableCommand {
     var outputPath: String
 
     mutating func run() throws {
-        let app = SwiftStringGarbler(
+        let pathConfig = PathConfig(
             environmentPath: environmentPath ?? ".env",
             checksumPath: checksumPath,
             outputPath: outputPath,
+            templatePath: templatePath
+        )
+        let app = SwiftStringGarbler(
+            pathConfig: pathConfig,
             userFlags: UserFlags(isVerbose: verbose)
         )
 
