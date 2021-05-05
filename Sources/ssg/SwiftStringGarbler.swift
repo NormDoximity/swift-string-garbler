@@ -10,6 +10,15 @@ import TSCBasic
 import CryptoKit
 import Mustache
 
+public struct UserFlags {
+    let isVerbose: Bool
+}
+
+private enum ValueLocation {
+    case file, env
+}
+private typealias ValueTuple = (value: String, location: ValueLocation)
+
 @available(OSX 10.15, *)
 final class SwiftStringGarbler {
 
@@ -22,11 +31,13 @@ final class SwiftStringGarbler {
     let environmentPath: String
     let outputPath: String
     let checksumPath: String?
+    private let userFlags: UserFlags
 
-    init(environmentPath: String, checksumPath: String?, outputPath: String) {
+    init(environmentPath: String, checksumPath: String?, outputPath: String, userFlags: UserFlags) {
         self.environmentPath = environmentPath
         self.checksumPath = checksumPath
         self.outputPath = outputPath
+        self.userFlags = userFlags
     }
 
     func run() throws {
@@ -48,11 +59,16 @@ final class SwiftStringGarbler {
         }
 
         // look into the process environment for variables that have the same name as our api.
-        let apiKeys = Dictionary(uniqueKeysWithValues:
-            inputJson.map { key, value -> (String, String) in
-                (key, ProcessEnv.vars[key] ?? value)            // prefer values from the runtime environment
-            }
-        )
+        let extracted = inputJson.map { key, value -> (String, String, ValueLocation) in
+            let location: ValueLocation = ProcessEnv.vars[key] != nil ? .env : .file
+            let extractedValue = ProcessEnv.vars[key] ?? value // prefer values from the runtime environment
+            return (key, extractedValue, location)
+        }
+
+        let apiKeys = Dictionary(uniqueKeysWithValues: extracted.map { ($0.0, $0.1) })
+        if userFlags.isVerbose {
+            print("\(variablesExtractedFromWhereReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
+        }
 
         if let checksumPath = checksumPath {
             let checksum = computeChecksum(for: apiKeys)
@@ -132,6 +148,22 @@ final class SwiftStringGarbler {
         return nil
     }
 
+    private func variablesExtractedFromWhereReport(variables: [ValueTuple]) -> String {
+        let fromEnvironment = variables.filter { $1 == .env }.map(\.value)
+        let fromFile = variables.filter { $1 == .file }.map(\.value)
+        let envReport = "Read from Environment:\n\t\(fromEnvironment.joined(separator: "\n\t"))"
+        let fileReport = "Read from File:\n\t\(fromFile.joined(separator: "\n\t"))"
+        switch (fromEnvironment.count, fromFile.count) {
+            case (0, 0):
+                return "Didn't read any variables from either file or environment."
+            case (0, _):
+                return "Read \(fromFile.count) values from the input file.\n\(fileReport)"
+            case (_, 0):
+                return "Read \(fromEnvironment.count) values from the runtime environment.\n\(envReport)"
+            default:
+                return "Read \(fromEnvironment.count) values from the runtime environment and \(fromFile.count) from the input file.\n\(fileReport)\n\(envReport)"
+        }
+    }
 }
 
 extension AbsolutePath {

@@ -10,6 +10,9 @@ struct SSGCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Path to variable checksum file")
     var checksumPath: String?
 
+    @Flag(name: .shortAndLong, help: "Verbose reporting")
+    var verbose: Bool = false
+
     @Argument(help: "path to generated file")
     var outputPath: String
 
@@ -17,7 +20,8 @@ struct SSGCommand: ParsableCommand {
         let app = SwiftStringGarbler(
             environmentPath: environmentPath ?? ".env",
             checksumPath: checksumPath,
-            outputPath: outputPath
+            outputPath: outputPath,
+            userFlags: UserFlags(isVerbose: verbose)
         )
 
         try app.run()
