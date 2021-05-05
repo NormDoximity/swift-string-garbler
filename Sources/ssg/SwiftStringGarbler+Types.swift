@@ -16,6 +16,8 @@ enum AppError: Error {
     case fileSystem(String)
     case badInputJson
     case dataError(String)
+    case badArguments(String)
+    case envRequirements(String)
 }
 
 public struct PathConfig: Equatable {
@@ -29,6 +31,19 @@ public struct PathConfig: Equatable {
     let checksumPath: String?
     let outputPath: String
     let templatePath: String?
+}
+
+public struct CIRequirements {
+    let identifer: String
+    let runtimeRequired: [String]
+    let requireAll: Bool
+
+    init(identifier: String, runtimeRequired: [String], requireAll: Bool = false) {
+        self.identifer = identifier
+        self.runtimeRequired = runtimeRequired
+        self.requireAll = requireAll
+    }
+
 }
 
 // MARK: - extensions
@@ -53,6 +68,8 @@ extension AppError: CustomStringConvertible {
         case .badInputJson:
             return "Unable to read environmen file as input."
         case .dataError(let message),
+             .badArguments(let message),
+             .envRequirements(let message),
              .fileSystem(let message):
             return message
         }
