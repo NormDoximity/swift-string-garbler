@@ -7,10 +7,10 @@ rm -f Tests/ssgTests/ProjectKeys.swift
 rm -f Tests/ssgTests/ProjectKeys.py
 
 echo "Encrypt/Decrypt"
-swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env --checksum-path Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift
 swift test
 echo "Checksum"
-result=$(swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift)
+result=$(swift run ssg -e Tests/test-env.env --checksum-path Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift)
 if [ "${result}" == "Checksums match. Skipping project keys file creation." ]; then
     echo "Tests passed."
 else
