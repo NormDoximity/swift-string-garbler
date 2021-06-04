@@ -10,23 +10,23 @@ import TSCBasic
 import CryptoKit
 import Mustache
 
+private enum ValueLocation {
+    case file, env
+}
+private typealias EnvAwareKeys = (key: String, value: String, location: ValueLocation)
+private typealias ValueTuple = (value: String, location: ValueLocation)
+
 @available(OSX 10.15, *)
 final class SwiftStringGarbler {
 
-    enum AppError: Error {
-        case fileSystem(String)
-        case badInputJson
-        case dataError(String)
-    }
+    private let pathConfig: PathConfig
+    private let userFlags: UserFlags
+    private let ciConfig: CIRequirements?
 
-    let environmentPath: String
-    let outputPath: String
-    let checksumPath: String?
-
-    init(environmentPath: String, checksumPath: String?, outputPath: String) {
-        self.environmentPath = environmentPath
-        self.checksumPath = checksumPath
-        self.outputPath = outputPath
+    init(pathConfig: PathConfig, userFlags: UserFlags, ciConfig: CIRequirements?) {
+        self.pathConfig = pathConfig
+        self.userFlags = userFlags
+        self.ciConfig = ciConfig
     }
 
     func run() throws {
@@ -34,10 +34,12 @@ final class SwiftStringGarbler {
             throw AppError.fileSystem("No current working directory!")
         }
 
-        let inputFile = absPath(for: environmentPath, relatativeTo: cwd)
-        guard inputFile.existsAsFile() else {
-            throw AppError.fileSystem("Couldn't find input environment at \(inputFile.pathString)")
+        let arePathsValid = pathConfig.isValid(cwd: cwd)
+        if case .invalid(let message) = arePathsValid {
+            throw AppError.fileSystem(message)
         }
+
+        let inputFile = pathConfig.environmentPath.absolutePath(relatetiveTo: cwd)
 
         guard let inputJson = try localFileSystem.readFileContents(inputFile)
             .withData({
@@ -48,22 +50,28 @@ final class SwiftStringGarbler {
         }
 
         // look into the process environment for variables that have the same name as our api.
-        let apiKeys = Dictionary(uniqueKeysWithValues:
-            inputJson.map { key, value -> (String, String) in
-                (key, ProcessEnv.vars[key] ?? value)            // prefer values from the runtime environment
-            }
-        )
+        let extracted = inputJson.map { key, value -> EnvAwareKeys in
+            let location: ValueLocation = ProcessEnv.vars[key] != nil ? .env : .file
+            let extractedValue = ProcessEnv.vars[key] ?? value // prefer values from the runtime environment
+            return (key, extractedValue, location)
+        }
 
-        if let checksumPath = checksumPath {
+        try checkBuildEnvironmentRequirements(buildVars: extracted)
+
+        let apiKeys = Dictionary(uniqueKeysWithValues: extracted.map { ($0.0, $0.1) })
+        if userFlags.isVerbose {
+            print("\(variablesExtractedFromWhereReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
+        }
+
+        if let checksumPath = pathConfig.checksumPath?.absolutePath(relatetiveTo: cwd) {
             let checksum = computeChecksum(for: apiKeys)
-            let existingSum = existingChecksum(at: checksumPath, relativeTo: cwd)
+            let existingSum = existingChecksum(at: checksumPath)
             if let existing = existingSum, existing == checksum {
                 print("Checksums match. Skipping project keys file creation.")
                 return
             }
-            let outPath = absPath(for: checksumPath, relatativeTo: cwd)
             do {
-                try localFileSystem.writeFileContents(outPath, bytes: ByteString(encodingAsUTF8: checksum))
+                try localFileSystem.writeFileContents(checksumPath, bytes: ByteString(encodingAsUTF8: checksum))
             } catch let e {
                 throw AppError.fileSystem(e.localizedDescription)
             }
@@ -101,11 +109,16 @@ final class SwiftStringGarbler {
         templateDict["apiKeys"] = templateKeys
 
         /// render the swift source file for our api keys
-        let template = try Mustache.Template(string: Template.keyFile)
+        let template: Mustache.Template
+        if let templatePath = pathConfig.templatePath?.absolutePath(relatetiveTo: cwd) {
+            template = try Mustache.Template(path: templatePath.pathString)
+        } else {
+            template = try Mustache.Template(string: Template.keyFile)
+        }
         let rendering = try template.render(templateDict)
 
         // write it out..
-        let path = absPath(for: outputPath, relatativeTo: cwd)
+        let path = pathConfig.outputPath.absolutePath(relatetiveTo: cwd)
         try localFileSystem.writeFileContents(path, bytes: ByteString(encodingAsUTF8: rendering))
     }
 
@@ -122,8 +135,7 @@ final class SwiftStringGarbler {
         return corpus.sha256Checksum()
     }
 
-    private func existingChecksum(at path: String, relativeTo cwd: AbsolutePath) -> String? {
-        let path = absPath(for: path, relatativeTo: cwd)
+    private func existingChecksum(at path: AbsolutePath) -> String? {
         if path.existsAsFile() {
             if let checksum = try? localFileSystem.readFileContents(path) {
                 return String(checksum.cString)
@@ -132,19 +144,48 @@ final class SwiftStringGarbler {
         return nil
     }
 
-}
+    private func checkBuildEnvironmentRequirements(buildVars: [EnvAwareKeys]) throws {
+        // first, are we running in the identified build environment, if not bail.
+        guard
+            let ciConfig = ciConfig,
+            ProcessEnv.vars[ciConfig.identifer] != nil,
+            ciConfig.requireAll == true || ciConfig.runtimeRequired.count > 0
+        else { return }
 
-extension AbsolutePath {
-    func existsAsFile(in fileSystem: FileSystem = localFileSystem) -> Bool {
-        return fileSystem.isFile(self)
+        let fromEnv = Set(
+            buildVars
+            .filter { $0.location == .env }
+            .map(\.key)
+        )
+
+        let requiredEnv: Set<String>
+        if ciConfig.requireAll {
+            requiredEnv = Set(buildVars.map(\.key))
+        } else {
+            requiredEnv = Set(ciConfig.runtimeRequired)
+        }
+
+        guard requiredEnv == fromEnv else {
+            let missing = requiredEnv.subtracting(fromEnv)
+            let message = "Not all required build environment values found.\nDid not find:\n\(missing.joined(separator: ",\n"))"
+            throw AppError.envRequirements(message)
+        }
     }
-}
 
-extension String {
-    @available(OSX 10.15, *)
-    func sha256Checksum() -> String {
-        guard let d = data(using: .utf8) else { fatalError("Can't get data representation of string \(self)") }
-        let digest = SHA256.hash(data: d)
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    private func variablesExtractedFromWhereReport(variables: [ValueTuple]) -> String {
+        let fromEnvironment = variables.filter { $1 == .env }.map(\.value)
+        let fromFile = variables.filter { $1 == .file }.map(\.value)
+        let envReport = "Read from Environment:\n\t\(fromEnvironment.joined(separator: "\n\t"))"
+        let fileReport = "Read from File:\n\t\(fromFile.joined(separator: "\n\t"))"
+        switch (fromEnvironment.count, fromFile.count) {
+            case (0, 0):
+                return "Didn't read any variables from either file or environment."
+            case (0, _):
+                return "Read \(fromFile.count) values from the input file.\n\(fileReport)"
+            case (_, 0):
+                return "Read \(fromEnvironment.count) values from the runtime environment.\n\(envReport)"
+            default:
+                return "Read \(fromEnvironment.count) values from the runtime environment and \(fromFile.count) from the input file.\n\(fileReport)\n\(envReport)"
+        }
     }
 }
