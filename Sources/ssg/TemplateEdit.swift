@@ -19,7 +19,7 @@ public enum ProjectKeys: CaseIterable {
 private extension ProjectKeys {
     var bytes: [UInt8] {
         switch self {
-        case .keyName: return Self.keyNameScrabbledValue
+        case .keyName: return Self.keyNameScrambledValue
         }
     }
 
@@ -37,7 +37,7 @@ private extension ProjectKeys {
 }
 
 private extension ProjectKeys {
-    static var keyNameScrabbledValue: [UInt8] { [] }
+    static var keyNameScrambledValue: [UInt8] { [] }
 }
 
 private extension ProjectKeys {

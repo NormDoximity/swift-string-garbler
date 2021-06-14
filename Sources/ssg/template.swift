@@ -29,7 +29,7 @@ private extension ProjectKeys {
     var bytes: [UInt8] {
         switch self {
         {{#apiKeys}}
-        case .{{keyName}}: return Self.{{keyName}}ScrabbledValue
+        case .{{keyName}}: return Self.{{keyName}}ScrambledValue
         {{/apiKeys}}
         }
     }
@@ -49,7 +49,7 @@ private extension ProjectKeys {
 
 private extension ProjectKeys {
     {{#apiKeys}}
-    static var {{keyName}}ScrabbledValue: [UInt8] { {{keyValue}} }
+    static var {{keyName}}ScrambledValue: [UInt8] { {{keyValue}} }
     {{/apiKeys}}
 }
 
