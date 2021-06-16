@@ -49,9 +49,13 @@ final class SwiftStringGarbler {
 
         // look into the process environment for variables that have the same name as our api.
         let apiKeys = Dictionary(uniqueKeysWithValues:
-            inputJson.map { key, value -> (String, String) in
-                (key, ProcessEnv.vars[key] ?? value)            // prefer values from the runtime environment
-            }
+            inputJson
+                .filter { key, _ -> Bool in
+                    !key.hasPrefix("__COMMENT__") // Omit comments 
+                }
+                .map { key, value -> (String, String) in
+                    (key, ProcessEnv.vars[key] ?? value) // prefer values from the runtime environment
+                }
         )
 
         if let checksumPath = checksumPath {
