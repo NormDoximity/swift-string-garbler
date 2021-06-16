@@ -46,3 +46,16 @@ file changes, `ssg` can create a checkusm of the key values pairs found in it's 
 a filesname with `--checksum-path` option will read the checksum from a previous run and compare it 
 to the new checksum computed from the environment. Should they differ, the new checksum is written at 
 the checksum path and a new swift source file is created.
+
+### Leaving Comments
+`ssg` supports comments in the JSON file if they have the prefix of `__COMMENT__`. When `ssg` encounters these, those entires are just skipped.
+```
+{
+    "__COMMENT__IMPORTANT-PLEASE-READ": "This is a very important note that we want future updaters to read when editing this file!",
+
+    "key1": "value1",
+    "key2": "value2",
+    "__COMMENT__Key-3": "This is a very important note specific to key3!",
+    "key3": "value3"
+}
+```
