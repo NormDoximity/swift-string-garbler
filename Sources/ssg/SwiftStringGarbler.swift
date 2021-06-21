@@ -22,11 +22,18 @@ final class SwiftStringGarbler {
     let environmentPath: String
     let outputPath: String
     let checksumPath: String?
+    let prioritizeAlternativeKeys: Bool
 
-    init(environmentPath: String, checksumPath: String?, outputPath: String) {
+    init(
+        environmentPath: String,
+        checksumPath: String?,
+        outputPath: String,
+        prioritizeAlternativeKeys: Bool
+    ) {
         self.environmentPath = environmentPath
         self.checksumPath = checksumPath
         self.outputPath = outputPath
+        self.prioritizeAlternativeKeys = prioritizeAlternativeKeys
     }
 
     func run() throws {
@@ -54,7 +61,11 @@ final class SwiftStringGarbler {
                     !key.hasPrefix("__COMMENT__") // Omit comments 
                 }
                 .map { key, value -> (String, String) in
-                    (key, ProcessEnv.vars[key] ?? value) // prefer values from the runtime environment
+                    let localValue = value
+                    let runtimeValue = ProcessEnv.vars[key]
+                    let valueToReturn = prioritizeAlternativeKeys ? localValue : (runtimeValue ?? localValue)
+
+                    return (key, valueToReturn)
                 }
         )
 
