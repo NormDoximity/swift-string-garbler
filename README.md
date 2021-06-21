@@ -17,6 +17,8 @@ OPTIONS:
                           Path to alternative keys file (defaults to .env)
   -c, --checksum-path <checksum-path>
                           Path to variable checksum file
+  -p --prioritize-alternative-keys <Bool>
+                          Allows for prioritization of Alternative Keys before the Runtime Keys. When omitted, `false` is assumed.
   -h, --help              Show help information.
 ```
 
