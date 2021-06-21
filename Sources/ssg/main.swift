@@ -10,7 +10,7 @@ struct SSGCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Path to variable checksum file")
     var checksumPath: String?
 
-    @Option(name: .shortAndLong, help: "Allows for prioritization of Alternative Keys before the Runtime Keys. When omitted, `false` is assumed.")
+    @Flag(name: .shortAndLong, help: "Allows for prioritization of Alternative Keys before the Runtime Keys. When omitted, `false` is assumed.")
     var prioritizeAlternativeKeys: Bool = false
 
     @Argument(help: "path to generated file")
