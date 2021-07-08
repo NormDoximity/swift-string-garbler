@@ -15,6 +15,7 @@ static let keyFile: String =
 // This file was automatically generated; do not edit.
 //
 
+import Foundation
 import CryptoKit
 
 public enum ProjectKeys: CaseIterable {
