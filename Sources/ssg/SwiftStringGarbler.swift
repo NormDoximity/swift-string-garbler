@@ -32,8 +32,7 @@ final class SwiftStringGarbler {
             throw AppError.fileSystem("No current working directory!")
         }
 
-        let arePathsValid = pathConfig.isValid(cwd: cwd)
-        if case .invalid(let message) = arePathsValid {
+        if case .invalid(let message) = pathConfig.isValid(cwd: cwd) {
             throw AppError.fileSystem(message)
         }
 
