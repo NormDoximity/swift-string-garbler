@@ -12,67 +12,58 @@ enum Template {
 static let keyFile: String =
 """
 // ****
-// this file was automatically generated. do not edit
+// This file was automatically generated; do not edit.
 //
-// 
+
 import Foundation
 import CryptoKit
 
-enum ProjectKeys {
-
-    private static var keyData: [UInt8] { {{encryptionKey}} }
-
-    private static var decryptKey: SymmetricKey? {
-        guard let d = dataFromBase64Encoded(keyData) else { return nil }
-        return SymmetricKey(data: d)
-    }
-
+public enum ProjectKeys: CaseIterable {
     {{#apiKeys}}
-    private static var {{keyName}}value: [UInt8] { {{keyValue}} }
+    case {{keyName}}
     {{/apiKeys}}
 
-    private enum Internal {
+    public var value: String { reconstitute }
+}
+
+private extension ProjectKeys {
+    var bytes: [UInt8] {
+        switch self {
         {{#apiKeys}}
-        case {{keyName}}
+        case .{{keyName}}: return Self.{{keyName}}ScrambledValue
         {{/apiKeys}}
+        }
     }
 
-    {{#apiKeys}}
-    public static var {{keyName}}: String { reconstituteValue(key: Internal.{{keyName}}) }
-    {{/apiKeys}}
-
-    private static func reconstituteValue(key: Internal) -> String {
-
-        guard let decryptKey = decryptKey else { fatalError("No Decryption Key") }
-
-        let bytes: [UInt8] = {
-            switch key {
-                {{#apiKeys}}
-                case .{{keyName}}:
-                return {{keyName}}value
-                {{/apiKeys}}
-            }
-        }()
-
+    var reconstitute: String {
+        guard let decryptKey = Self.decryptKey else { fatalError("No Decryption Key") }
         guard
-            let data = dataFromBase64Encoded(bytes),
-            let sealedBox = try? ChaChaPoly.SealedBox(combined: data)
+            let reconstitutedText = Self.dataFromBase64Encoded(bytes)
+                .flatMap({ try? ChaChaPoly.SealedBox(combined: $0) })
+                .flatMap({ try? ChaChaPoly.open($0, using: decryptKey) })
+                .flatMap({ String(data: $0, encoding: .utf8) })
         else { fatalError() }
 
-        guard
-            let decryptedData = try? ChaChaPoly.open(sealedBox, using: decryptKey),
-            let clearText = String(data: decryptedData, encoding: .utf8)
-        else {
-            fatalError()
-        }
-        return clearText
+        return reconstitutedText
+    }
+}
+
+private extension ProjectKeys {
+    {{#apiKeys}}
+    static var {{keyName}}ScrambledValue: [UInt8] { {{keyValue}} }
+    {{/apiKeys}}
+}
+
+private extension ProjectKeys {
+    static var keyData: [UInt8] { {{encryptionKey}} }
+
+    static var decryptKey: SymmetricKey? {
+        dataFromBase64Encoded(keyData).flatMap { SymmetricKey(data: $0) }
     }
 
-    private static func dataFromBase64Encoded(_ bytes: [UInt8]) -> Data? {
-        guard let s = String(bytes: bytes, encoding: .utf8) else { return nil }
-        return Data(base64Encoded: s)
+    static func dataFromBase64Encoded(_ bytes: [UInt8]) -> Data? {
+        String(bytes: bytes, encoding: .utf8).flatMap { Data(base64Encoded: $0) }
     }
-
 }
 """
 }

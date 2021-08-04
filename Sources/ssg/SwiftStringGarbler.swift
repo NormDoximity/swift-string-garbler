@@ -21,13 +21,14 @@ final class SwiftStringGarbler {
 
     private let pathConfig: PathConfig
     private let userFlags: UserFlags
+    private let prioritizeAlternativeKeys: Bool    
     private let ciConfig: CIRequirements?
 
-    init(pathConfig: PathConfig, userFlags: UserFlags, ciConfig: CIRequirements?) {
+    init(pathConfig: PathConfig, userFlags: UserFlags, prioritizeAlternativeKeys: Bool, ciConfig: CIRequirements?) {
         self.pathConfig = pathConfig
         self.userFlags = userFlags
+        self.prioritizeAlternativeKeys = prioritizeAlternativeKeys
         self.ciConfig = ciConfig
-    }
 
     func run() throws {
         guard let cwd = localFileSystem.currentWorkingDirectory else {
@@ -50,11 +51,31 @@ final class SwiftStringGarbler {
         }
 
         // look into the process environment for variables that have the same name as our api.
-        let extracted = inputJson.map { key, value -> EnvAwareKeys in
-            let location: ValueLocation = ProcessEnv.vars[key] != nil ? .env : .file
-            let extractedValue = ProcessEnv.vars[key] ?? value // prefer values from the runtime environment
-            return (key, extractedValue, location)
-        }
+        
+//        let extracted = inputJson.map { key, value -> EnvAwareKeys in
+//            let location: ValueLocation = ProcessEnv.vars[key] != nil ? .env : .file
+//            let extractedValue = ProcessEnv.vars[key] ?? value // prefer values from the runtime environment
+//            return (key, extractedValue, location)
+//        }
+
+        let apiKeys = Dictionary(uniqueKeysWithValues:
+            inputJson
+                .filter { key, _ -> Bool in
+                    !key.hasPrefix("__COMMENT__") // Omit comments 
+                }
+                .map { key, value -> EnvAwareKeys in
+                    let localValue = value
+                    let runtimeValue = ProcessEnv.vars[key]
+                    let valueToReturn = prioritizeAlternativeKeys ? localValue : (runtimeValue ?? localValue)
+                    let location: ValueLocation
+                    if prioritizeAlternativeKeys {
+                        location = .file
+                    } else {
+                        location = runtimeValue != nil ? .env : .file
+                    }
+                    return (key, valueToReturn, location)
+                }
+        )
 
         try checkBuildEnvironmentRequirements(buildVars: extracted)
 
