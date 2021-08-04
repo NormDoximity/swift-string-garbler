@@ -21,12 +21,10 @@ final class SwiftStringGarbler {
 
     private let pathConfig: PathConfig
     private let userFlags: UserFlags
-    private let ciConfig: CIRequirements?
 
-    init(pathConfig: PathConfig, userFlags: UserFlags, ciConfig: CIRequirements?) {
+    init(pathConfig: PathConfig, userFlags: UserFlags) {
         self.pathConfig = pathConfig
         self.userFlags = userFlags
-        self.ciConfig = ciConfig
     }
 
     func run() throws {
@@ -50,13 +48,22 @@ final class SwiftStringGarbler {
         }
 
         // look into the process environment for variables that have the same name as our api.
-        let extracted = inputJson.map { key, value -> EnvAwareKeys in
-            let location: ValueLocation = ProcessEnv.vars[key] != nil ? .env : .file
-            let extractedValue = ProcessEnv.vars[key] ?? value // prefer values from the runtime environment
-            return (key, extractedValue, location)
+        let extracted = inputJson
+            .filter { key, _ -> Bool in
+                !key.hasPrefix("__COMMENT__") // Omit comments
+            }
+            .map { key, value -> EnvAwareKeys in
+                let localValue = value
+                let runtimeValue = ProcessEnv.vars[key]
+                let valueToReturn = userFlags.prioritizeAlternativeKeys ? localValue : (runtimeValue ?? localValue)
+                let location: ValueLocation
+                if !userFlags.prioritizeAlternativeKeys {
+                    location = runtimeValue != nil ? .env : .file
+                } else {
+                    location = .file
+                }
+                return (key, valueToReturn, location)
         }
-
-        try checkBuildEnvironmentRequirements(buildVars: extracted)
 
         let apiKeys = Dictionary(uniqueKeysWithValues: extracted.map { ($0.0, $0.1) })
         if userFlags.isVerbose {
@@ -142,34 +149,6 @@ final class SwiftStringGarbler {
             }
         }
         return nil
-    }
-
-    private func checkBuildEnvironmentRequirements(buildVars: [EnvAwareKeys]) throws {
-        // first, are we running in the identified build environment, if not bail.
-        guard
-            let ciConfig = ciConfig,
-            ProcessEnv.vars[ciConfig.identifer] != nil,
-            ciConfig.requireAll == true || ciConfig.runtimeRequired.count > 0
-        else { return }
-
-        let fromEnv = Set(
-            buildVars
-            .filter { $0.location == .env }
-            .map(\.key)
-        )
-
-        let requiredEnv: Set<String>
-        if ciConfig.requireAll {
-            requiredEnv = Set(buildVars.map(\.key))
-        } else {
-            requiredEnv = Set(ciConfig.runtimeRequired)
-        }
-
-        guard requiredEnv == fromEnv else {
-            let missing = requiredEnv.subtracting(fromEnv)
-            let message = "Not all required build environment values found.\nDid not find:\n\(missing.joined(separator: ",\n"))"
-            throw AppError.envRequirements(message)
-        }
     }
 
     private func variablesExtractedFromWhereReport(variables: [ValueTuple]) -> String {

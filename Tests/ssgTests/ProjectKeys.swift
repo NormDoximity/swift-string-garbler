@@ -1,81 +1,66 @@
 // ****
-// this file was automatically generated. do not edit
+// This file was automatically generated; do not edit.
 //
-// 
+
 import Foundation
 import CryptoKit
 
-enum ProjectKeys {
+public enum ProjectKeys: CaseIterable {
+    
+    case key1
+    
+    case key2
+    
+    case key3
+    
 
-    private static var keyData: [UInt8] { [100, 75, 57, 102, 87, 117, 86, 72, 78, 85, 117, 112, 107, 81, 100, 104, 102, 81, 83, 66, 118, 49, 54, 79, 51, 85, 102, 86, 116, 122, 69, 57, 47, 111, 80, 84, 105, 53, 100, 98, 114, 107, 81, 61] }
+    public var value: String { reconstitute }
+}
 
-    private static var decryptKey: SymmetricKey? {
-        guard let d = dataFromBase64Encoded(keyData) else { return nil }
-        return SymmetricKey(data: d)
+private extension ProjectKeys {
+    var bytes: [UInt8] {
+        switch self {
+        
+        case .key1: return Self.key1ScrambledValue
+        
+        case .key2: return Self.key2ScrambledValue
+        
+        case .key3: return Self.key3ScrambledValue
+        
+        }
     }
 
-    
-    private static var key3value: [UInt8] { [82, 88, 82, 57, 73, 76, 77, 53, 85, 105, 88, 85, 76, 101, 87, 57, 111, 121, 116, 51, 79, 99, 108, 70, 122, 98, 116, 66, 55, 88, 47, 97, 71, 75, 90, 87, 121, 106, 66, 69, 88, 102, 104, 83, 52, 98, 54, 49, 115, 120, 104, 50, 102, 90, 76, 73, 115, 78, 43, 71, 68, 74, 121, 70, 55, 98, 105, 54, 83, 81, 55, 115, 47, 49, 99, 61] }
-    
-    private static var key2value: [UInt8] { [66, 101, 51, 116, 81, 82, 112, 88, 97, 43, 113, 71, 108, 109, 57, 67, 55, 116, 53, 80, 117, 101, 111, 108, 99, 97, 75, 57, 78, 69, 51, 109, 115, 83, 97, 99, 97, 113, 104, 72, 53, 111, 119, 120, 53, 97, 119, 97, 65, 55, 106, 111, 51, 80, 80, 70, 121, 56, 107, 61] }
-    
-    private static var key1value: [UInt8] { [88, 49, 48, 100, 121, 49, 81, 75, 105, 67, 118, 118, 73, 77, 83, 90, 72, 68, 55, 57, 118, 72, 66, 55, 50, 76, 51, 103, 53, 43, 101, 98, 67, 85, 48, 54, 87, 76, 110, 86, 113, 118, 102, 117, 82, 54, 88, 52, 116, 66, 78, 75, 52, 105, 113, 119, 43, 79, 85, 61] }
-    
-
-    private enum Internal {
-        
-        case key3
-        
-        case key2
-        
-        case key1
-        
-    }
-
-    
-    public static var key3: String { reconstituteValue(key: Internal.key3) }
-    
-    public static var key2: String { reconstituteValue(key: Internal.key2) }
-    
-    public static var key1: String { reconstituteValue(key: Internal.key1) }
-    
-
-    private static func reconstituteValue(key: Internal) -> String {
-
-        guard let decryptKey = decryptKey else { fatalError("No Decryption Key") }
-
-        let bytes: [UInt8] = {
-            switch key {
-                
-                case .key3:
-                return key3value
-                
-                case .key2:
-                return key2value
-                
-                case .key1:
-                return key1value
-                
-            }
-        }()
-
+    var reconstitute: String {
+        guard let decryptKey = Self.decryptKey else { fatalError("No Decryption Key") }
         guard
-            let data = dataFromBase64Encoded(bytes),
-            let sealedBox = try? ChaChaPoly.SealedBox(combined: data)
+            let reconstitutedText = Self.dataFromBase64Encoded(bytes)
+                .flatMap({ try? ChaChaPoly.SealedBox(combined: $0) })
+                .flatMap({ try? ChaChaPoly.open($0, using: decryptKey) })
+                .flatMap({ String(data: $0, encoding: .utf8) })
         else { fatalError() }
 
-        guard
-            let decryptedData = try? ChaChaPoly.open(sealedBox, using: decryptKey),
-            let clearText = String(data: decryptedData, encoding: .utf8)
-        else {
-            fatalError()
-        }
-        return clearText
+        return reconstitutedText
+    }
+}
+
+private extension ProjectKeys {
+    
+    static var key1ScrambledValue: [UInt8] { [102, 53, 43, 101, 99, 49, 103, 68, 74, 122, 76, 84, 76, 56, 72, 105, 101, 99, 99, 116, 114, 81, 70, 47, 114, 75, 107, 105, 101, 87, 48, 106, 106, 97, 122, 113, 113, 86, 102, 51, 112, 85, 53, 122, 48, 83, 101, 50, 88, 86, 121, 102, 73, 43, 47, 113, 86, 83, 48, 61] }
+    
+    static var key2ScrambledValue: [UInt8] { [107, 54, 48, 73, 114, 118, 99, 50, 57, 75, 67, 76, 114, 106, 88, 119, 114, 121, 117, 114, 97, 115, 109, 112, 76, 66, 107, 69, 65, 104, 102, 84, 119, 71, 109, 121, 54, 80, 50, 120, 109, 67, 120, 88, 80, 73, 57, 119, 90, 57, 89, 82, 68, 109, 105, 88, 102, 105, 111, 61] }
+    
+    static var key3ScrambledValue: [UInt8] { [97, 97, 80, 86, 52, 89, 90, 113, 120, 105, 101, 83, 80, 121, 84, 77, 104, 79, 118, 80, 73, 86, 104, 88, 76, 67, 79, 115, 118, 112, 114, 47, 72, 117, 78, 70, 47, 68, 89, 78, 85, 106, 88, 68, 49, 72, 74, 122, 89, 75, 108, 88, 76, 102, 118, 49, 51, 88, 57, 73, 102, 81, 90, 108, 114, 73, 55, 72, 81, 122, 115, 97, 99, 55, 81, 61] }
+    
+}
+
+private extension ProjectKeys {
+    static var keyData: [UInt8] { [86, 82, 74, 98, 111, 114, 107, 83, 53, 106, 81, 87, 86, 77, 120, 68, 57, 112, 51, 54, 50, 80, 76, 119, 88, 78, 48, 111, 49, 98, 112, 65, 103, 78, 43, 111, 108, 71, 72, 51, 100, 78, 103, 61] }
+
+    static var decryptKey: SymmetricKey? {
+        dataFromBase64Encoded(keyData).flatMap { SymmetricKey(data: $0) }
     }
 
-    private static func dataFromBase64Encoded(_ bytes: [UInt8]) -> Data? {
-        guard let s = String(bytes: bytes, encoding: .utf8) else { return nil }
-        return Data(base64Encoded: s)
+    static func dataFromBase64Encoded(_ bytes: [UInt8]) -> Data? {
+        String(bytes: bytes, encoding: .utf8).flatMap { Data(base64Encoded: $0) }
     }
-
 }

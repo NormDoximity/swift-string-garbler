@@ -10,6 +10,7 @@ import TSCBasic
 
 public struct UserFlags {
     let isVerbose: Bool
+    let prioritizeAlternativeKeys: Bool
 }
 
 enum AppError: Error {
@@ -33,20 +34,7 @@ public struct PathConfig: Equatable {
     let templatePath: String?
 }
 
-public struct CIRequirements {
-    let identifer: String
-    let runtimeRequired: [String]
-    let requireAll: Bool
-
-    init(identifier: String, runtimeRequired: [String], requireAll: Bool = false) {
-        self.identifer = identifier
-        self.runtimeRequired = runtimeRequired
-        self.requireAll = requireAll
-    }
-
-}
-
-// MARK: - extensions
+// MARK: - app type extensions
 
 extension PathConfig {
     func isValid(cwd: AbsolutePath) -> ValidationStatus {
@@ -66,7 +54,7 @@ extension AppError: CustomStringConvertible {
     var description: String {
         switch self {
         case .badInputJson:
-            return "Unable to read environmen file as input."
+            return "Unable to read environment file as input."
         case .dataError(let message),
              .badArguments(let message),
              .envRequirements(let message),
