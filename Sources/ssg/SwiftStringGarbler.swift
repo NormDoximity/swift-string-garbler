@@ -66,7 +66,7 @@ final class SwiftStringGarbler {
 
         let apiKeys = Dictionary(uniqueKeysWithValues: extracted.map { ($0.0, $0.1) })
         if userFlags.isVerbose {
-            print("\(variablesExtractedFromWhereReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
+            print("\(extractedVariablesLocationReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
         }
 
         if let checksumPath = pathConfig.checksumPath?.absolutePath(relatetiveTo: cwd) {
@@ -150,7 +150,7 @@ final class SwiftStringGarbler {
         return nil
     }
 
-    private func variablesExtractedFromWhereReport(variables: [ValueTuple]) -> String {
+    private func extractedVariablesLocationReport(variables: [ValueTuple]) -> String {
         let fromEnvironment = variables.filter { $1 == .env }.map(\.value)
         let fromFile = variables.filter { $1 == .file }.map(\.value)
         let envReport = "Read from Environment:\n\t\(fromEnvironment.joined(separator: "\n\t"))"

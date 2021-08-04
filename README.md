@@ -14,7 +14,7 @@ ARGUMENTS:
 
 OPTIONS:
   -e, --environment-path <environment-path>
-                          Path to alternative keys file (defaults to .env). (default: .env)
+                          Path to alternative keys file (defaults to .env)
   -c, --checksum-path <checksum-path>
                           Path to variable checksum file.
   -t, --template-path <template-path>
