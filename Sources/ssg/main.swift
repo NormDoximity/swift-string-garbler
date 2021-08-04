@@ -7,7 +7,9 @@ struct SSGCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Path to alternative keys file (defaults to .env)")
     var environmentPath: String = ".env"
 
-    @Option(name: .shortAndLong, help: "Path to variable checksum file")
+    @Option(
+        name: .customShort("k"), help: "Path to variable checksum file"
+    )
     var checksumPath: String?
 
     @Option(name: .shortAndLong, help: "Path to custom output template")

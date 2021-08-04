@@ -7,10 +7,10 @@ rm -f Tests/ssgTests/ProjectKeys.swift
 rm -f Tests/ssgTests/ProjectKeys.py
 
 echo "Encrypt/Decrypt"
-swift run ssg -e Tests/test-env.env --checksum-path Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift
 swift test
 echo "Checksum"
-result=$(swift run ssg -e Tests/test-env.env --checksum-path Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift)
+result=$(swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift)
 if [ "${result}" == "Checksums match. Skipping project keys file creation." ]; then
     echo "Tests passed."
 else
@@ -27,24 +27,24 @@ fi
 echo "Environment requirements"
 export key2="this two is from the environment"
 export BUILD_ENV="BUILD_ENV"
-swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt --environment-id BUILD_ENV -r key2 key3 -- Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt --environment-id BUILD_ENV -r key2 key3 -- Tests/ssgTests/ProjectKeys.swift
 if [ $? -ne 0 ]; then
    echo "specific environment variables required test failed."
    exit
 fi
 export key1="key 1 env"
-swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt --environment-id BUILD_ENV --env-all-required Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt --environment-id BUILD_ENV --env-all-required Tests/ssgTests/ProjectKeys.swift
 if [ $? -ne 0 ]; then
    echo "all variables required test failed."
    exit
 fi
 unset key1
-swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt --environment-id BUILD_ENV --env-all-required Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt --environment-id BUILD_ENV --env-all-required Tests/ssgTests/ProjectKeys.swift
 if [ $? -eq 0 ]; then
    echo "all variables required failure test failed."
    exit
 fi
-swift run ssg -e Tests/test-env.env -c Tests/ssgTests/checksum.txt --environment-id BUILD_ENV -r key1 key2 key3 -- Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env -k Tests/ssgTests/checksum.txt --environment-id BUILD_ENV -r key1 key2 key3 -- Tests/ssgTests/ProjectKeys.swift
 if [ $? -eq 0 ]; then
    echo "missing variable specified test failed."
    exit
