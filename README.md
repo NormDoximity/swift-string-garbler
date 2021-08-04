@@ -7,18 +7,21 @@ Hides sensitive strings that get embedded in your app's binary.
 
 
 ```
-USAGE: ssg [--environment-path <environment-path>] [--checksum-path <checksum-path>] <output-path>
+USAGE: ssg-command [--environment-path <environment-path>] [--checksum-path <checksum-path>] [--template-path <template-path>] [--verbose] [--prioritize-alternative-keys] <output-path>
 
 ARGUMENTS:
-  <output-path>           path to generated file
+  <output-path>           Path to generated file.
 
 OPTIONS:
   -e, --environment-path <environment-path>
-                          Path to alternative keys file (defaults to .env)
+                          Path to alternative keys file (defaults to .env). (default: .env)
   -c, --checksum-path <checksum-path>
-                          Path to variable checksum file
-  -p --prioritize-alternative-keys <Bool>
-                          Allows for prioritization of Alternative Keys before the Runtime Keys. When omitted, `false` is assumed.
+                          Path to variable checksum file.
+  -t, --template-path <template-path>
+                          Path to custom output template.
+  -v, --verbose           Enable verbose reporting.
+  -p, --prioritize-alternative-keys
+                          Prefer using alternative keys to keys found in runtime environment.
   -h, --help              Show help information.
 ```
 
