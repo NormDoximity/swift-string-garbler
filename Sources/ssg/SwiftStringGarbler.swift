@@ -10,30 +10,21 @@ import TSCBasic
 import CryptoKit
 import Mustache
 
+private enum ValueLocation {
+    case file, env
+}
+private typealias EnvAwareKeys = (key: String, value: String, location: ValueLocation)
+private typealias ValueTuple = (value: String, location: ValueLocation)
+
 @available(OSX 10.15, *)
 final class SwiftStringGarbler {
 
-    enum AppError: Error {
-        case fileSystem(String)
-        case badInputJson
-        case dataError(String)
-    }
+    private let pathConfig: PathConfig
+    private let userFlags: UserFlags
 
-    let environmentPath: String
-    let outputPath: String
-    let checksumPath: String?
-    let prioritizeAlternativeKeys: Bool
-
-    init(
-        environmentPath: String,
-        checksumPath: String?,
-        outputPath: String,
-        prioritizeAlternativeKeys: Bool
-    ) {
-        self.environmentPath = environmentPath
-        self.checksumPath = checksumPath
-        self.outputPath = outputPath
-        self.prioritizeAlternativeKeys = prioritizeAlternativeKeys
+    init(pathConfig: PathConfig, userFlags: UserFlags) {
+        self.pathConfig = pathConfig
+        self.userFlags = userFlags
     }
 
     func run() throws {
@@ -41,10 +32,11 @@ final class SwiftStringGarbler {
             throw AppError.fileSystem("No current working directory!")
         }
 
-        let inputFile = absPath(for: environmentPath, relatativeTo: cwd)
-        guard inputFile.existsAsFile() else {
-            throw AppError.fileSystem("Couldn't find input environment at \(inputFile.pathString)")
+        if case .invalid(let message) = pathConfig.isValid(cwd: cwd) {
+            throw AppError.fileSystem(message)
         }
+
+        let inputFile = pathConfig.environmentPath.absolutePath(relatetiveTo: cwd)
 
         guard let inputJson = try localFileSystem.readFileContents(inputFile)
             .withData({
@@ -55,30 +47,37 @@ final class SwiftStringGarbler {
         }
 
         // look into the process environment for variables that have the same name as our api.
-        let apiKeys = Dictionary(uniqueKeysWithValues:
-            inputJson
-                .filter { key, _ -> Bool in
-                    !key.hasPrefix("__COMMENT__") // Omit comments 
+        let extracted = inputJson
+            .filter { key, _ -> Bool in
+                !key.hasPrefix("__COMMENT__") // Omit comments
+            }
+            .map { key, value -> EnvAwareKeys in
+                let localValue = value
+                let runtimeValue = ProcessEnv.vars[key]
+                let valueToReturn = userFlags.prioritizeAlternativeKeys ? localValue : (runtimeValue ?? localValue)
+                let location: ValueLocation
+                if !userFlags.prioritizeAlternativeKeys {
+                    location = runtimeValue != nil ? .env : .file
+                } else {
+                    location = .file
                 }
-                .map { key, value -> (String, String) in
-                    let localValue = value
-                    let runtimeValue = ProcessEnv.vars[key]
-                    let valueToReturn = prioritizeAlternativeKeys ? localValue : (runtimeValue ?? localValue)
+                return (key, valueToReturn, location)
+        }
 
-                    return (key, valueToReturn)
-                }
-        )
+        let apiKeys = Dictionary(uniqueKeysWithValues: extracted.map { ($0.0, $0.1) })
+        if userFlags.isVerbose {
+            print("\(extractedVariablesLocationReport(variables: extracted.map { ValueTuple($0.0, $0.2) }))")
+        }
 
-        if let checksumPath = checksumPath {
+        if let checksumPath = pathConfig.checksumPath?.absolutePath(relatetiveTo: cwd) {
             let checksum = computeChecksum(for: apiKeys)
-            let existingSum = existingChecksum(at: checksumPath, relativeTo: cwd)
+            let existingSum = existingChecksum(at: checksumPath)
             if let existing = existingSum, existing == checksum {
                 print("Checksums match. Skipping project keys file creation.")
                 return
             }
-            let outPath = absPath(for: checksumPath, relatativeTo: cwd)
             do {
-                try localFileSystem.writeFileContents(outPath, bytes: ByteString(encodingAsUTF8: checksum))
+                try localFileSystem.writeFileContents(checksumPath, bytes: ByteString(encodingAsUTF8: checksum))
             } catch let e {
                 throw AppError.fileSystem(e.localizedDescription)
             }
@@ -116,11 +115,16 @@ final class SwiftStringGarbler {
         templateDict["apiKeys"] = templateKeys
 
         /// render the swift source file for our api keys
-        let template = try Mustache.Template(string: Template.keyFile)
+        let template: Mustache.Template
+        if let templatePath = pathConfig.templatePath?.absolutePath(relatetiveTo: cwd) {
+            template = try Mustache.Template(path: templatePath.pathString)
+        } else {
+            template = try Mustache.Template(string: Template.keyFile)
+        }
         let rendering = try template.render(templateDict)
 
         // write it out..
-        let path = absPath(for: outputPath, relatativeTo: cwd)
+        let path = pathConfig.outputPath.absolutePath(relatetiveTo: cwd)
         try localFileSystem.writeFileContents(path, bytes: ByteString(encodingAsUTF8: rendering))
     }
 
@@ -137,8 +141,7 @@ final class SwiftStringGarbler {
         return corpus.sha256Checksum()
     }
 
-    private func existingChecksum(at path: String, relativeTo cwd: AbsolutePath) -> String? {
-        let path = absPath(for: path, relatativeTo: cwd)
+    private func existingChecksum(at path: AbsolutePath) -> String? {
         if path.existsAsFile() {
             if let checksum = try? localFileSystem.readFileContents(path) {
                 return String(checksum.cString)
@@ -147,19 +150,20 @@ final class SwiftStringGarbler {
         return nil
     }
 
-}
-
-extension AbsolutePath {
-    func existsAsFile(in fileSystem: FileSystem = localFileSystem) -> Bool {
-        return fileSystem.isFile(self)
-    }
-}
-
-extension String {
-    @available(OSX 10.15, *)
-    func sha256Checksum() -> String {
-        guard let d = data(using: .utf8) else { fatalError("Can't get data representation of string \(self)") }
-        let digest = SHA256.hash(data: d)
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    private func extractedVariablesLocationReport(variables: [ValueTuple]) -> String {
+        let fromEnvironment = variables.filter { $1 == .env }.map(\.value)
+        let fromFile = variables.filter { $1 == .file }.map(\.value)
+        let envReport = "Read from Environment:\n\t\(fromEnvironment.joined(separator: "\n\t"))"
+        let fileReport = "Read from File:\n\t\(fromFile.joined(separator: "\n\t"))"
+        switch (fromEnvironment.count, fromFile.count) {
+            case (0, 0):
+                return "Didn't read any variables from either file or environment."
+            case (0, _):
+                return "Read \(fromFile.count) values from the input file.\n\(fileReport)"
+            case (_, 0):
+                return "Read \(fromEnvironment.count) values from the runtime environment.\n\(envReport)"
+            default:
+                return "Read \(fromEnvironment.count) values from the runtime environment and \(fromFile.count) from the input file.\n\(fileReport)\n\(envReport)"
+        }
     }
 }

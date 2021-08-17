@@ -4,24 +4,37 @@ import ArgumentParser
 @available(OSX 10.15, *)
 struct SSGCommand: ParsableCommand {
 
-    @Option(name: .shortAndLong, help: "Path to alternative keys file (defaults to .env)")
+    @Option(name: .shortAndLong, help: "Path to alternative keys file (defaults to .env).")
     var environmentPath: String = ".env"
 
-    @Option(name: .shortAndLong, help: "Path to variable checksum file")
+    @Option(name: .shortAndLong, help: "Path to variable checksum file.")
     var checksumPath: String?
 
-    @Flag(name: .shortAndLong, help: "Allows for prioritization of Alternative Keys before the Runtime Keys. When omitted, `false` is assumed.")
+    @Option(name: .shortAndLong, help: "Path to custom output template.")
+    var templatePath: String?
+
+    @Flag(name: .shortAndLong, help: "Enable verbose reporting.")
+    var verbose = false
+    
+    @Flag(name: .shortAndLong, help: "Prefer using alternative keys to keys found in runtime environment.")
     var prioritizeAlternativeKeys: Bool = false
 
-    @Argument(help: "path to generated file")
+    @Argument(help: "Path to generated file.")
     var outputPath: String
 
     mutating func run() throws {
-        let app = SwiftStringGarbler(
+        let pathConfig = PathConfig(
             environmentPath: environmentPath,
             checksumPath: checksumPath,
             outputPath: outputPath,
-            prioritizeAlternativeKeys: prioritizeAlternativeKeys
+            templatePath: templatePath
+        )
+        let app = SwiftStringGarbler(
+            pathConfig: pathConfig,
+            userFlags: UserFlags(
+                isVerbose: verbose,
+                prioritizeAlternativeKeys: prioritizeAlternativeKeys
+            )
         )
 
         try app.run()

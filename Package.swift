@@ -13,8 +13,8 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(url: "https://github.com/apple/swift-argument-parser", .upToNextMinor(from: "0.2.0")),
-        .package(url: "https://github.com/apple/swift-tools-support-core", .upToNextMinor(from: "0.1.10")),
+        .package(url: "https://github.com/apple/swift-argument-parser", .exact("0.4.3")),
+        .package(url: "https://github.com/apple/swift-tools-support-core", .exact("0.2.1")),
         .package(name: "Mustache", url: "https://github.com/groue/GRMustache.swift", .upToNextMinor(from: "4.0.1")),
     ],
     targets: [
