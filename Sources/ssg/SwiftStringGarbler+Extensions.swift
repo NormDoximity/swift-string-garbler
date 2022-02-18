@@ -9,22 +9,29 @@ import Foundation
 import TSCBasic
 import CryptoKit
 
-public extension AbsolutePath {
-    func existsAsFile(in fileSystem: FileSystem = localFileSystem) -> Bool {
+extension AbsolutePath {
+    public func existsAsFile(in fileSystem: FileSystem = localFileSystem) -> Bool {
         return fileSystem.isFile(self)
     }
 }
 
-public extension String {
+extension String {
     @available(OSX 10.15, *)
-    func sha256Checksum() -> String {
+    public func sha256Checksum() -> String {
         guard let d = data(using: .utf8) else { fatalError("Can't get data representation of string \(self)") }
         let digest = SHA256.hash(data: d)
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 
-    func absolutePath(relatetiveTo path: AbsolutePath) -> AbsolutePath {
+    public func absolutePath(relatetiveTo path: AbsolutePath) -> AbsolutePath {
         hasPrefix("/") ? AbsolutePath(self) : AbsolutePath(self, relativeTo: path)
     }
 
+    public var asData: Data? { data(using: .utf8) }
+}
+
+extension Data {
+    public var asUTF8String: String? {
+        String(data: self, encoding: .utf8)
+    }
 }

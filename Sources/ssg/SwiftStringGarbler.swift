@@ -39,8 +39,12 @@ final class SwiftStringGarbler {
         let inputFile = pathConfig.environmentPath.absolutePath(relatetiveTo: cwd)
 
         guard let inputJson = try localFileSystem.readFileContents(inputFile)
-            .withData({
-                return try JSONSerialization.jsonObject(with: $0, options: .allowFragments) as? [String: String]
+            .withData({ jsonData -> [String: String]? in
+                guard
+                    let source = jsonData.asUTF8String,
+                    let strippedOfComments = stripLineComments(from: source).asData
+                else { return nil }
+                return try JSONSerialization.jsonObject(with: strippedOfComments, options: .allowFragments) as? [String: String]
             })
         else {
             throw AppError.badInputJson
@@ -126,6 +130,23 @@ final class SwiftStringGarbler {
         // write it out..
         let path = pathConfig.outputPath.absolutePath(relatetiveTo: cwd)
         try localFileSystem.writeFileContents(path, bytes: ByteString(encodingAsUTF8: rendering))
+    }
+
+    private func stripLineComments(from source: String) -> String {
+        let commentMarker = CharacterSet(charactersIn: "//")
+        let newline = CharacterSet(charactersIn: "\n")
+
+        let scanner = Scanner(string: source)
+
+        var stripped = [String]()
+        while !scanner.isAtEnd {
+            let upToComment = scanner.scanUpToCharacters(from: commentMarker)
+            _ = scanner.scanUpToCharacters(from: newline)
+            if let text = upToComment, !text.isEmpty {
+                stripped.append(text)
+            }
+        }
+        return stripped.joined()
     }
 
     private func absPath(for pathString: String, relatativeTo path: AbsolutePath) -> AbsolutePath {
