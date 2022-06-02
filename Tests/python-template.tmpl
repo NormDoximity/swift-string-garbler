@@ -6,6 +6,8 @@
 #
 #
 #
+import functools
+
 class ProjectKeys:
 
     keyData = {{encryptionKey}}
@@ -21,6 +23,6 @@ if __name__ == '__main__':
     key1_len = False if len(keys.key1_value) == 0 else True
     key2_len = False if len(keys.key2_value) == 0 else True
     key3_len = False if len(keys.key3_value) == 0 else True
-    result = reduce(lambda p,q: p and q, [key_len, key1_len, key2_len, key3_len])
+    result = functools.reduce(lambda p,q: p and q, [key_len, key1_len, key2_len, key3_len])
     message = "Success" if result else "Failed"
     print(message)
