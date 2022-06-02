@@ -76,7 +76,8 @@ final class SwiftStringGarbler {
         if let checksumPath = pathConfig.checksumPath?.absolutePath(relatetiveTo: cwd) {
             let checksum = computeChecksum(for: apiKeys)
             let existingSum = existingChecksum(at: checksumPath)
-            if let existing = existingSum, existing == checksum {
+            let outputFile = pathConfig.outputPath.absolutePath(relatetiveTo: cwd)
+            if let existing = existingSum, existing == checksum && outputFile.existsAsFile() {
                 print("Checksums match. Skipping project keys file creation.")
                 return
             }

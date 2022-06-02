@@ -16,6 +16,16 @@ if [ "${result}" == "Checksums match. Skipping project keys file creation." ]; t
 else
     echo "Test failed recieved as checksum test output ${result}"
 fi
+echo "Remove output file, keeping checksum regenerates the output file"
+rm Tests/ssgTests/ProjectKeys.swift
+swift run ssg -e Tests/test-env.env --checksum-path Tests/ssgTests/checksum.txt Tests/ssgTests/ProjectKeys.swift
+if [ -f "Tests/ssgTests/ProjectKeys.swift" ]; then
+    echo "Output file recreated"
+    rm Tests/ssgTests/OldFile.swift
+    swift test
+else
+    echo "Test failed, output file not found"
+fi
 echo "User specified template"
 swift run ssg -e Tests/test-env.env -t Tests/python-template.tmpl Tests/ssgTests/ProjectKeys.py
 result=$(python Tests/ssgTests/ProjectKeys.py)
